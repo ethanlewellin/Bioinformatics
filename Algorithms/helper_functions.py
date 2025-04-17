@@ -2,6 +2,9 @@
 import os
 import requests
 import tarfile
+import gzip
+import shutil
+import pandas as pd
 from typing import Dict
 
 ### Get 10x data from URL
@@ -56,3 +59,62 @@ def download_and_extract_10x_data(data_path: str, folder_path: str, urls: Dict[s
 
     # List final contents
     print("Final folder contents:", os.listdir(folder_path))
+
+
+### Decompress .csv.gz File
+def decompress_file(gz_path: str) -> None:
+    """
+    Decompresses a .gz file to its original CSV form.
+
+    Args:
+        gz_path (str): Path to the .gz compressed file.
+    """
+    csv_path = gz_path.rstrip('.gz')
+    with gzip.open(gz_path, 'rb') as f_in:
+        with open(csv_path, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    print(f"Decompressed {gz_path} to {csv_path}")
+    
+### Load and Inspect 10x Data (Generic)
+def load_and_inspect_10x_csv_data(sample_path: str) -> Dict[str, pd.DataFrame]:
+    """
+    Loads and inspects all CSV/CSV.GZ files in a given 10x data sample directory.
+    Automatically decompresses any .csv.gz files if needed.
+
+    Args:
+        sample_path (str): Path to the unzipped 10x data sample folder.
+
+    Returns:
+        Dict[str, pd.DataFrame]: Dictionary where keys are file names (without extension)
+                                 and values are corresponding pandas DataFrames.
+    """
+    data_frames = {}
+
+    for file_name in os.listdir(sample_path):
+        file_path = os.path.join(sample_path, file_name)
+
+        if file_name.endswith(".csv.gz"):
+            csv_path = file_path.rstrip(".gz")
+
+            # Decompress if .csv file doesn't exist
+            if not os.path.exists(csv_path):
+                decompress_file(file_path)
+
+            # Load DataFrame
+            df = pd.read_csv(csv_path)
+            key_name = os.path.splitext(os.path.basename(csv_path))[0]
+            data_frames[key_name] = df
+            print(f"Loaded {key_name} (from .csv.gz) with shape {df.shape}")
+
+        elif file_name.endswith(".csv"):
+            df = pd.read_csv(file_path)
+            key_name = os.path.splitext(os.path.basename(file_path))[0]
+            data_frames[key_name] = df
+            print(f"Loaded {key_name} (from .csv) with shape {df.shape}")
+
+    # Quick inspection — show heads
+    for name, df in data_frames.items():
+        print(f"\n{name} preview:")
+        print(df.head())
+
+    return data_frames
