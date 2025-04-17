@@ -2,6 +2,7 @@
 import os
 import requests
 import tarfile
+import zipfile
 import gzip
 import shutil
 import pandas as pd
@@ -54,6 +55,16 @@ def download_and_extract_10x_data(data_path: str, folder_path: str, urls: Dict[s
                     print(f"Extracted {filename} to: {folder_path}")
                 except Exception as e:
                     print(f"An error occurred while extracting {filename}: {e}")
+            
+            # If the file is a .zip, extract it
+            elif filename.endswith(".zip"):
+                try:
+                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                        zip_ref.extractall(folder_path)
+                    print(f"Extracted {filename} to: {folder_path}")
+                except Exception as e:
+                    print(f"An error occurred while extracting {filename}: {e}")
+
         else:
             print(f"Failed to download {filename}, status code: {response.status_code}")
 
